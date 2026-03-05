@@ -1,0 +1,85 @@
+\chapter{Méthodologie et Implémentation}
+\label{chap:methode}
+
+% --- CHAPEAU DU CHAPITRE ---
+Dans ce chapitre, nous justifions nos choix d'implémentation afin de vérifier les trois hypothèses formulées précédemment. Ces choix résultent directement des constats de l'état de l'art. Nous détaillerons d'abord l'architecture technique retenue, puis le protocole rigoureux de création des stimuli linguistiques, pour enfin exposer les étapes d'analyse nous permettant de mesurer la dimensionnalité intrinsèque.
+
+% --- SECTION 2.1 ---
+\section{Justification des Choix Techniques}
+
+Afin de mesurer l'évolution de la dimensionnalité intrinsèque (ID) au sein d'une architecture neuronale, nous avons sélectionné un ensemble d'outils spécifiques.
+
+\subsection{Modèle de Langage : GPT-2 Small}
+Nous avons choisi GPT-2 (via la librairie \textit{HuggingFace}) en raison de son architecture \textit{Decoder-only} qui traite l'information de manière unidirectionnelle (de gauche à droite, avec un masque causal). Ce choix est crucial pour tester l'activité de \textit{ramping} (Hypothèse 1), car il simule la progression temporelle de la lecture humaine, contrairement aux modèles bidirectionnels comme BERT qui "voient" toute la phrase d'un coup.
+
+\subsection{Algorithme d'Estimation de l'ID : TwoNN}
+Conformément à l'état de l'art établi par Facco et al. (2017) \cite{facco2017estimating}, nous utiliserons l'algorithme \textit{Two-Nearest Neighbors} (TwoNN). 
+
+Son principal avantage est sa robustesse face aux variations de densité des données. Comme nous travaillons sur des variétés (\textit{manifolds}) locales (mot par mot), TwoNN permet d'estimer l'ID sans être biaisé par la courbure globale de l'espace des embeddings.
+Le principe est le suivant : pour chaque point $i$ (représentation d'un token), on calcule les distances vers ses deux plus proches voisins, $r_{i,1}$ et $r_{i,2}$.
+
+\subsection{Langage et Frameworks}
+L’implémentation est réalisée en \textbf{Python}. Nous utilisons :
+\begin{itemize}
+    \item \textbf{PyTorch} pour l’extraction des \textit{hidden states} (états cachés) à chaque couche du modèle.
+    \item \textbf{NumPy} pour la manipulation des données multidimensionnelles, le calcul matriciel et la gestion des tenseurs.
+    \item \textbf{scikit-dimension} qui fournit une implémentation optimisée de l'algorithme TwoNN.
+\end{itemize}
+
+\subsection{Extension vers Llama 3.1 (8B)}
+Nous intégrons également un modèle récent, Llama 3.1 (8 milliards de paramètres), pour généraliser nos observations. Cela nous permettra de prouver que les mécanismes de compression sémantique sont fondamentaux aux architectures Transformers modernes, et d'observer si la "vitesse" de compression diffère selon la profondeur du modèle.
+
+\subsection{Limites de la modélisation du MUC}
+Il est important de noter une limite théorique : l’architecture Transformer ne modélise pas la composante \og Contrôle \fg{} du modèle MUC. Dans le cerveau humain, le contrôle intervient pour résoudre les conflits sémantiques (comme face au Jabberwocky). Ici, GPT-2 et Llama 3 n’ont pas de supervision ; ils traiteront le Jabberwocky comme une séquence statistique improbable. Nous nous attendons donc à voir l’échec de l’Unification (un profil \textit{Hunchback} déformé) sans pouvoir observer l’activité compensatoire du Contrôle.
+
+% --- SECTION 2.2 ---
+\section{Protocole de Génération des Stimuli}
+
+La validation de nos hypothèses repose sur la comparaison de deux types de signaux. L’objectif est d’isoler l’impact du sens (la sémantique) en maintenant la structure grammaticale constante.
+
+\subsection{Le groupe "Sémantique"}
+Nous avons constitué un corpus de \textbf{500 phrases} extraites du dataset \textit{Wikitext} (Wikipedia). Ce volume a été choisi pour deux raisons :
+\begin{itemize}
+    \item \textbf{Stabilité statistique :} L'estimateur TwoNN nécessite une densité de points suffisante pour éviter les biais. 500 phrases permettent d'obtenir une courbe d'évolution de l'ID représentative.
+    \item \textbf{Diversité linguistique :} Ce nombre couvre une variété de structures syntaxiques (phrases simples, complexes, énumérations), évitant le biais d'un style d'écriture spécifique.
+\end{itemize}
+
+\subsection{Le groupe "Jabberwocky"}
+Pour tester l'Hypothèse 3, nous avons généré une version "vide de sens" de chaque phrase du premier groupe. Ce procédé s'inspire des neurosciences cognitives pour tromper le modèle sans briser la structure de la langue.
+
+Le processus de transformation suit trois règles strictes :
+\begin{enumerate}
+    \item \textbf{Préservation des mots-outils :} Nous conservons les déterminants, prépositions et conjonctions (ex: le, la, dans, mais) qui servent de squelette syntaxique.
+    \item \textbf{Substitution lexicale :} Seuls les mots porteurs de sens (noms, verbes, adjectifs) sont remplacés.
+    \item \textbf{Respect de la phonotactique :} Les pseudo-mots (ex: \textit{vlipure, carlouée}) sont créés pour respecter les règles de sonorité du français. Ils sont "lisibles" mais n'existent pas dans le dictionnaire du modèle.
+\end{enumerate}
+
+\textit{Exemple :} "La musique d'Elsa Barraine est rarement jouée" devient "La vlipure d'Elsa Barraine est jitrement carlouée".
+
+\subsection{Synthèse des données}
+Chaque phrase "Jabberwocky" possède exactement le même nombre de mots et la même structure grammaticale que sa phrase "Sémantique" correspondante. Cette approche par paires garantit que toute différence de dimensionnalité observée est uniquement due à l'absence de cohérence sémantique.
+
+\subsection{Enjeux de la Tokenisation (BPE)}
+Avant d'être traitées, les phrases sont converties en unités numériques par l'algorithme \textit{Byte Pair Encoding} (BPE). Ce processus est crucial et induit un biais technique pour le Jabberwocky :
+\begin{itemize}
+    \item \textbf{Fragmentation :} Les mots du groupe "Sémantique" existent dans le vocabulaire et forment souvent un seul token. Les pseudo-mots (ex: \textit{vlipure}) sont inconnus et sont fragmentés en sous-unités (ex: \textit{vli + pure}).
+    \item \textbf{Conséquence :} Cette fragmentation augmente mécaniquement le nombre de pas de temps. Nous devrons analyser l'évolution de l'ID de manière relative à la progression dans la phrase, car le modèle fournit un effort supplémentaire de reconstruction pour lier ces fragments.
+\end{itemize}
+
+% --- SECTION 2.3 ---
+\section{Étapes de l'analyse}
+
+Pour chaque phrase testée, nous suivons un parcours précis d'observation :
+
+\begin{itemize}
+    \item \textbf{Récupération de l'activité interne :} Nous n'observons pas seulement la sortie, mais nous enregistrons l'activité des \textit{hidden states} à chaque couche intermédiaire. Cela nous donne une image précise de l'état du modèle, mot après mot.
+    
+    \item \textbf{Mesure de l'ID mot après mot :} Pour tester l'effet de \textit{ramping}, nous calculons la dimensionnalité au fur et à mesure que le modèle lit la phrase (1er mot, puis 1er+2ème, etc.). Cela permet de voir si l'information s'accumule ou stagne.
+    
+    \item \textbf{Comparaison des profils de couches :} Nous comparons l'évolution de la complexité entre l'entrée et la sortie. L'objectif est de vérifier si le modèle parvient à compresser les phrases sémantiques (profil d'expansion-compression).
+\end{itemize}
+
+À l'inverse, avec le Jabberwocky, nous nous attendons à ce que cette simplification échoue. Comme le mot "vlipure" ne correspond à rien de connu, le modèle ne peut pas le compresser vers un concept simple. Il reste "perdu" dans la complexité, ce qui devrait empêcher la chute de l'ID dans les dernières couches.
+
+% --- CONCLUSION DU CHAPITRE (OBLIGATOIRE) ---
+Dans ce chapitre, nous avons détaillé notre approche méthodologique, justifiant le choix des modèles (GPT-2, Llama) et de la métrique (TwoNN). Nous avons également défini un protocole strict de génération de stimuli (Sémantique vs Jabberwocky) pour isoler l'impact du sens sur la dimensionnalité. Ces outils et ces données sont maintenant prêts à être utilisés pour générer les résultats que nous analyserons dans le chapitre suivant.
