@@ -18,7 +18,7 @@ def compare_evolution(text):
     return sim.mean().item()
 
 phrase_sens = "The scientist discovered a new cure for the disease."
-phrase_sens2 = "I love my girlfriend Adele, she is the best."
+phrase_sens2 = "I love apple juice, i drink it every morning."
 phrase_nimporte_quoi = "Table sky running green idea desk fast."
 phrase_chaos = "ijidjfirjzi fjijfi iedie ikdqiq"
 phrase_jabberwocky = "He took his vorpal sword in hand: Long time the manxome foe he sough"

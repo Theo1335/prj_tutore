@@ -11,6 +11,8 @@ dependencies = [
     "spacy[apple]",
     "transformers",
     "torch",
+    "scikit-learn",
+    "matplotlib>=3.10.8",
 ]
 
 [tool.uv.sources]
