@@ -444,6 +444,7 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "spacy", extra = ["apple"] },
     { name = "torch" },
+    { name = "tqdm" },
     { name = "transformers" },
 ]
 
@@ -456,6 +457,7 @@ requires-dist = [
     { name = "scikit-learn" },
     { name = "spacy", extras = ["apple"] },
     { name = "torch" },
+    { name = "tqdm", specifier = ">=4.67.3" },
     { name = "transformers" },
 ]
 
