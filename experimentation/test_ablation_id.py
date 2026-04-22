@@ -111,27 +111,31 @@ def run_ablation_experiment():
 
 def main():
     results = run_ablation_experiment()
-    
+
     labels = list(results.keys())
     values = list(results.values())
-    
+
     plt.figure(figsize=(10, 6))
-    
-    
     bars = plt.bar(labels, values, edgecolor='black')
-    
     for bar in bars:
         yval = bar.get_height()
         plt.text(bar.get_x() + bar.get_width()/2, yval + (max(values)*0.02), round(yval, 4), ha='center', va='bottom', fontweight='bold')
 
     plt.title("Expérience d'Ablation : Impact de la suppression d'une classe grammaticale\nsur la Dimension Intrinsèque (Couche 12)", fontsize=13)
     plt.ylabel("Dimension Intrinsèque Globale (ID)", fontsize=11)
-    
     plt.ylim(0, max(values) * 1.15)
     plt.grid(axis='y', linestyle='--', alpha=0.5)
-    
     output_file = "ablation_id_comparison.png"
     plt.savefig(output_file, dpi=300, bbox_inches='tight')
+
+    # Ajout : création et sauvegarde d'un DataFrame pandas
+    import pandas as pd
+    df = pd.DataFrame({
+        "Condition": labels,
+        "ID": values
+    })
+    print(df)
+    df.to_csv("ablation_id_results.csv", index=False)
 
 if __name__ == '__main__':
     main()

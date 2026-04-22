@@ -7,6 +7,8 @@ from transformers import GPT2Tokenizer, GPT2Model
 from sklearn.neighbors import NearestNeighbors
 from collections import defaultdict
 from tqdm import tqdm
+import pandas as pd
+
 
 MODEL_NAME = "gpt2"
 LIMIT_CHARS = 50000
@@ -129,6 +131,14 @@ def main():
         else:
             print(f"POS: {pos_tag:<5} | Mots analysés: {len(embeddings_list):<4} | (Ignoré, pas assez de données)")
 
+    df = pd.DataFrame({
+        "POS": list(valid_pos_data.keys()),
+        "ID": list(valid_pos_data.values()),
+        "Count": [valid_pos_counts[pos] for pos in valid_pos_data.keys()]
+    })
+    print(df)
+    df.to_csv("pos_id_results.csv", index=False)
+
 
     sorted_pos = sorted(valid_pos_data.items(), key=lambda item: item[1])
     labels = [f"{item[0]}\n(n={valid_pos_counts[item[0]]})" for item in sorted_pos]
@@ -151,6 +161,9 @@ def main():
     
     output_file = "pos_id_comparison.png"
     plt.savefig(output_file, dpi=300, bbox_inches='tight')
+
+
+
 
 if __name__ == '__main__':
     main()
